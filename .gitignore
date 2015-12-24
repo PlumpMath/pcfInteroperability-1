@@ -1,0 +1,17 @@
+*.pyc
+*~
+.project
+.pydevproject
+*.egg-info
+.tox
+*.log
+*.egg
+*.swp
+*.swo
+build
+dist
+.testrepository
+.venv
+.coverage*
+!.coveragerc
+cover/
