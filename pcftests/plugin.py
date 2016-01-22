@@ -14,13 +14,10 @@
 
 import os
 
-from tempest import config
 from tempest.test_discover import plugins
 
-from pcftests import config as ec2_config
 
-
-class EC2TempestPlugin(plugins.TempestPlugin):
+class PCFTempestPlugin(plugins.TempestPlugin):
     def load_tests(self):
         base_path = os.path.split(os.path.dirname(
             os.path.abspath(__file__)))[0]

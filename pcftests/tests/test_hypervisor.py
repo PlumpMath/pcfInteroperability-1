@@ -14,19 +14,19 @@
 #    under the License.
 
 from tempest.api.compute import base
-from tempest import test
 
 
 class HypervisorAdminTestJSON(base.BaseV2ComputeAdminTest):
-    """Tests Hypervisors API that require admin privileges"""
+    """Tests Hypervisors API that require admin privileges."""
 
     @classmethod
     def setup_clients(cls):
+        """Setup clients."""
         super(HypervisorAdminTestJSON, cls).setup_clients()
         cls.client = cls.os_adm.hypervisor_client
 
     def test_get_hypervisor_type(self):
-        # Verify that all hypervisors are KVM-based
+        """Verify that all hypervisors are KVM-based."""
         hypers = self.client.list_hypervisors()['hypervisors']
         for hyper in hypers:
             details = (self.client.show_hypervisor(hypers[0]['id'])
