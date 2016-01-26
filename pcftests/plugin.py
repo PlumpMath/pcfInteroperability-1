@@ -17,7 +17,7 @@ import os
 from tempest.test_discover import plugins
 
 
-class PCFTempestPlugin(plugins.TempestPlugin):
+class EC2TempestPlugin(plugins.TempestPlugin):
     def load_tests(self):
         base_path = os.path.split(os.path.dirname(
             os.path.abspath(__file__)))[0]

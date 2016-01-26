@@ -13,16 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.api.compute import base
+from pcftests.tests import base
 
 
-class HypervisorAdminTestJSON(base.BaseV2ComputeAdminTest):
+class HypervisorTest(base.BaseServerTest):
     """Tests Hypervisors API that require admin privileges."""
 
     @classmethod
     def setup_clients(cls):
         """Setup clients."""
-        super(HypervisorAdminTestJSON, cls).setup_clients()
+        super(HypervisorTest, cls).setup_clients()
         cls.client = cls.os_adm.hypervisor_client
 
     def test_get_hypervisor_type(self):

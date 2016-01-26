@@ -19,27 +19,25 @@ import time
 
 from oslo_log import log as logging
 from six import moves
-from tempest.common import compute
 from tempest.common.utils import data_utils
-from tempest.common import waiters
 from tempest import config
-import tempest.test
 from tempest_lib import exceptions as lib_exc
+
+from pcftests.tests import base
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class BasicOperationsImagesTest(tempest.test.BaseTestCase):
+class BasicOperationsImagesTest(base.BaseServerTest):
     """Here we test the basic operations of images."""
 
-    disk_config = 'AUTO'
-    credentials = ['primary', 'admin']
+#    disk_config = 'AUTO'
+#    credentials = ['primary']
 
     @classmethod
     def setup_credentials(cls):
         """Setup credentials."""
-        cls.set_network_resources()
         super(BasicOperationsImagesTest, cls).setup_credentials()
 
     @classmethod
@@ -49,22 +47,16 @@ class BasicOperationsImagesTest(tempest.test.BaseTestCase):
         cls.build_interval = CONF.compute.build_interval
         cls.build_timeout = CONF.compute.build_timeout
         cls.created_images = []
-        cls.created_flavors = []
-        cls.servers = []
 
     @classmethod
     def setup_clients(cls):
         """Setup clients."""
         super(BasicOperationsImagesTest, cls).setup_clients()
         cls.glance_client = cls.os.image_client_v2
-        cls.flavor_client = cls.os_adm.flavors_client
-        cls.servers_client = cls.manager.servers_client
 
     @classmethod
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
-        cls.clear_servers()
-        cls.clear_flavors()
         cls.clear_images()
 
     def _get_output(self):
@@ -88,53 +80,6 @@ class BasicOperationsImagesTest(tempest.test.BaseTestCase):
                 condition()
                 return
             time.sleep(self.build_interval)
-
-    @classmethod
-    def create_server(cls, validatable=False, volume_backed=False,
-                      **kwargs):
-        """Wrapper utility that returns a test server.
-
-        This wrapper utility calls the common create test server and
-        returns a test server. The purpose of this wrapper is to minimize
-        the impact on the code of the tests already using this
-        function.
-
-        :param validatable: Whether the server will be pingable or sshable.
-        :param volume_backed: Whether the instance is volume backed or not.
-        """
-        body, servers = compute.create_test_server(
-            cls.os,
-            validatable,
-            validation_resources=cls.validation_resources,
-            volume_backed=volume_backed,
-            **kwargs)
-
-        cls.servers.extend(servers)
-
-        return body
-
-    @classmethod
-    def clear_servers(cls):
-        """Clear servers at the end of tests."""
-        LOG.debug('Clearing servers: %s', ','.join(
-            server['id'] for server in cls.servers))
-        for server in cls.servers:
-            try:
-                cls.servers_client.delete_server(server['id'])
-            except lib_exc.NotFound:
-                # Something else already cleaned up the server, nothing to be
-                # worried about
-                pass
-            except Exception:
-                LOG.exception('Deleting server %s failed' % server['id'])
-
-        for server in cls.servers:
-            try:
-                waiters.wait_for_server_termination(cls.servers_client,
-                                                    server['id'])
-            except Exception:
-                LOG.exception('Waiting for deletion of server %s failed'
-                              % server['id'])
 
     @classmethod
     def create_image(cls, **kwargs):
@@ -168,48 +113,6 @@ class BasicOperationsImagesTest(tempest.test.BaseTestCase):
                 pass
             except Exception:
                 LOG.exception('Exception raised deleting image %s' % image_id)
-
-    @classmethod
-    def create_flavor(cls, **kwargs):
-        """Wrapper that returns a test image."""
-        flavor_name = data_utils.rand_name('flavor')
-        flavor_id = data_utils.rand_int_id(start=1000)
-
-        if 'name' in kwargs:
-            flavor_name = kwargs.pop('name')
-
-        ram = kwargs.pop('ram')
-        vcpus = kwargs.pop('vcpus')
-        disk = kwargs.pop('disk')
-
-        flavor = (cls.flavor_client.create_flavor
-                  (name=flavor_name,
-                   ram=ram,
-                   vcpus=vcpus,
-                   disk=disk,
-                   id=flavor_id))['flavor']
-
-        # Image objects returned by the v1 client have the image
-        # data inside a dict that is keyed against 'image'.
-        if 'flavor' in flavor:
-            flavor = flavor['flavor']
-        cls.created_flavors.append(flavor['id'])
-
-        return flavor['id']
-
-    @classmethod
-    def clear_flavors(cls):
-        """Clear flavors at the end of tests."""
-        LOG.debug('Clearing flavors: %s', ','.join(cls.created_flavors))
-        for flavor_id in cls.created_flavors:
-            try:
-                cls.flavor_client.delete_flavor(flavor_id)
-            except lib_exc.NotFound:
-                # The image may have already been deleted which is OK.
-                pass
-            except Exception:
-                LOG.exception(
-                    'Exception raised deleting flavor %s' % flavor_id)
 
     def test_image_create(self):
         """Here we test these functionalities.
@@ -252,28 +155,3 @@ class BasicOperationsImagesTest(tempest.test.BaseTestCase):
 
         # wait for console log
         self.wait_for(self._get_output)
-
-    def test_flavor_create(self):
-        """Here we test these functionalities.
-
-        Ability to create or modify Flavors.
-        """
-        flavor_name = data_utils.rand_name('flavor')
-
-        ram = 64
-        vcpus = 1
-        disk = 0
-
-        # Create a flavor without extra specs
-        flavor_id = self.create_flavor(
-            name=flavor_name,
-            ram=ram,
-            vcpus=vcpus,
-            disk=disk)
-
-        server_name = data_utils.rand_name('server')
-        self.create_server(
-            name=server_name,
-            image_id=CONF.compute.image_ref,
-            flavor=flavor_id,
-            wait_until='ACTIVE')
