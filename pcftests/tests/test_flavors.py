@@ -28,8 +28,7 @@ LOG = logging.getLogger(__name__)
 class BasicOperationsFlavorsTest(base.BaseServerTest):
     """Here we test the basic operations of images."""
 
-#    disk_config = 'AUTO'
-#    credentials = ['primary', 'admin']
+    credentials = ['primary', 'admin']
 
     @classmethod
     def setup_credentials(cls):

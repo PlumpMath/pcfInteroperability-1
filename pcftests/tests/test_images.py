@@ -32,9 +32,6 @@ LOG = logging.getLogger(__name__)
 class BasicOperationsImagesTest(base.BaseServerTest):
     """Here we test the basic operations of images."""
 
-#    disk_config = 'AUTO'
-#    credentials = ['primary']
-
     @classmethod
     def setup_credentials(cls):
         """Setup credentials."""

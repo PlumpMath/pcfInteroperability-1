@@ -29,7 +29,7 @@ class BaseServerTest(tempest.test.BaseTestCase):
     """Base test case class for all PCF tests."""
 
     disk_config = 'AUTO'
-    credentials = ['primary', 'admin']
+    credentials = ['primary']
 
     @classmethod
     def setup_credentials(cls):
@@ -67,10 +67,12 @@ class BaseServerTest(tempest.test.BaseTestCase):
         :param validatable: Whether the server will be pingable or sshable.
         :param volume_backed: Whether the instance is volume backed or not.
         """
+        tenant_network = cls.get_tenant_network()
         body, servers = compute.create_test_server(
             cls.os,
             validatable,
             validation_resources=cls.validation_resources,
+            tenant_network=tenant_network,
             volume_backed=volume_backed,
             **kwargs)
 
@@ -92,6 +94,7 @@ class BaseServerTest(tempest.test.BaseTestCase):
                 pass
             except Exception:
                 LOG.exception('Deleting server %s failed' % server['id'])
+                print('Deleting server %s failed' % server['id'])
 
         for server in cls.servers:
             try:
@@ -100,3 +103,4 @@ class BaseServerTest(tempest.test.BaseTestCase):
             except Exception:
                 LOG.exception('Waiting for deletion of server %s failed'
                               % server['id'])
+                print('Deleting server %s failed' % server['id'])

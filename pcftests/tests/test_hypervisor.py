@@ -19,6 +19,8 @@ from pcftests.tests import base
 class HypervisorTest(base.BaseServerTest):
     """Tests Hypervisors API that require admin privileges."""
 
+    credentials = ['primary', 'admin']
+
     @classmethod
     def setup_clients(cls):
         """Setup clients."""

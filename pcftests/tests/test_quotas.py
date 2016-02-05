@@ -38,6 +38,6 @@ class QuotasTest(base.BaseServerTest):
         ram = 64000
 
         quotas = self.client.show_quota_set(self.tenant_id)['quota_set']
-        self.assertGreater(cores, quotas['cores'])
-        self.assertGreater(instances, quotas['instances'])
-        self.assertGreater(ram, quotas['ram'])
+        self.assertGreater(quotas['cores'], cores)
+        self.assertGreater(quotas['instances'], instances)
+        self.assertGreater(quotas['ram'], ram)
