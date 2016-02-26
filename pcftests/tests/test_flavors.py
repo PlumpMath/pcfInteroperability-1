@@ -25,37 +25,40 @@ CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class BasicOperationsFlavorsTest(base.BaseServerTest):
-    """Here we test the basic operations of images."""
+class FlavorTest(base.BasePCFTest):
+    """Here we test ability to create Flavors."""
 
     credentials = ['primary', 'admin']
 
     @classmethod
     def setup_credentials(cls):
         """Setup credentials."""
-        super(BasicOperationsFlavorsTest, cls).setup_credentials()
+        super(FlavorTest, cls).setup_credentials()
 
     @classmethod
     def resource_setup(cls):
         """Setup resources."""
-        super(BasicOperationsFlavorsTest, cls).resource_setup()
+        super(FlavorTest, cls).resource_setup()
         cls.created_flavors = []
+        cls.created_servers = []
 
     @classmethod
     def setup_clients(cls):
         """Setup clients."""
-        super(BasicOperationsFlavorsTest, cls).setup_clients()
+        super(FlavorTest, cls).setup_clients()
         cls.flavor_client = cls.os_adm.flavors_client
 
     @classmethod
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_flavors()
+        cls.clear_servers()
 
     @classmethod
     def create_flavor(cls, **kwargs):
         """Wrapper that returns a test image."""
-        flavor_name = data_utils.rand_name('flavor')
+        flavor_name = data_utils.rand_name('FlavorTest')
+
         flavor_id = data_utils.rand_int_id(start=1000)
 
         if 'name' in kwargs:
@@ -95,24 +98,20 @@ class BasicOperationsFlavorsTest(base.BaseServerTest):
                     'Exception raised deleting flavor %s' % flavor_id)
 
     def test_flavor_create(self):
-        """Here we test these functionalities.
-
-        Ability to create or modify Flavors.
-        """
-        flavor_name = data_utils.rand_name('flavor')
-
+        """Here we test ability to create Flavors."""
         ram = 64
         vcpus = 1
         disk = 0
 
         # Create a flavor without extra specs
+        flavor_name = data_utils.rand_name(self.__class__.__name__)
         flavor_id = self.create_flavor(
             name=flavor_name,
             ram=ram,
             vcpus=vcpus,
             disk=disk)
 
-        server_name = data_utils.rand_name('server')
+        server_name = data_utils.rand_name(self.__class__.__name__)
         self.create_server(
             name=server_name,
             image_id=CONF.compute.image_ref,

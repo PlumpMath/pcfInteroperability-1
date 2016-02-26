@@ -16,7 +16,7 @@
 from pcftests.tests import base
 
 
-class HypervisorTest(base.BaseServerTest):
+class HypervisorTest(base.BasePCFTest):
     """Tests Hypervisors API that require admin privileges."""
 
     credentials = ['primary', 'admin']
@@ -31,6 +31,6 @@ class HypervisorTest(base.BaseServerTest):
         """Verify that all hypervisors are KVM-based."""
         hypers = self.client.list_hypervisors()['hypervisors']
         for hyper in hypers:
-            details = (self.client.show_hypervisor(hypers[0]['id'])
+            details = (self.client.show_hypervisor(hyper['id'])
                        ['hypervisor'])
             self.assertEqual('KVM', details['hypervisor_type'])

@@ -18,7 +18,7 @@ from tempest.common.utils import data_utils
 from pcftests.tests import base
 
 
-class SecurityGroupsTest(base.BaseServerTest):
+class SecurityGroupsTest(base.BasePCFTest):
     """Tests capability to allocate Floating IPs.."""
 
     @classmethod
@@ -60,18 +60,6 @@ class SecurityGroupsTest(base.BaseServerTest):
         }
 
     @classmethod
-    def create_security_group(cls, name=None, description=None):
-        if name is None:
-            name = data_utils.rand_name(cls.__name__ + "-securitygroup")
-        if description is None:
-            description = data_utils.rand_name('description')
-        body = cls.client.create_security_group(
-            name=name, description=description)['security_group']
-        cls.security_groups.append(body)
-
-        return body
-
-    @classmethod
     def clear_security_groups(cls):
         # Delete all security groups
         for sg in cls.security_groups:
@@ -84,6 +72,18 @@ class SecurityGroupsTest(base.BaseServerTest):
                 continue
             self.assertEqual(self.expected[key], actual_rule[key],
                              "Miss-matched key is %s" % key)
+
+    @classmethod
+    def create_security_group(cls, name=None, description=None):
+        if name is None:
+            name = data_utils.rand_name(cls.__name__ + "-securitygroup")
+        if description is None:
+            description = data_utils.rand_name('description')
+        body = cls.client.create_security_group(
+            name=name, description=description)['security_group']
+        cls.security_groups.append(body)
+
+        return body
 
     def test_create_security_groups(self):
         # Should return the list of Security Groups

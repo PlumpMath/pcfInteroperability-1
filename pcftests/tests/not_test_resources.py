@@ -25,7 +25,7 @@ CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class ResourcesTest(base.BaseServerTest):
+class ResourcesTest(base.BasePCFTest):
 
     credentials = ['primary', 'admin']
 
@@ -52,7 +52,6 @@ class ResourcesTest(base.BaseServerTest):
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_flavors()
-        cls.clear_servers()
 
     @classmethod
     def create_flavor(cls, **kwargs):
@@ -121,7 +120,7 @@ class ResourcesTest(base.BaseServerTest):
         ram = 1024
         vcpus = 1
         disk = 10
-        vms = 16
+        vms = 10
 
         self.create_test_server(vms, ram, vcpus, disk)
 

@@ -16,7 +16,7 @@
 from pcftests.tests import base
 
 
-class QuotasTest(base.BaseServerTest):
+class QuotasTest(base.BasePCFTest):
     """Tests Quotas."""
 
     @classmethod
@@ -38,6 +38,9 @@ class QuotasTest(base.BaseServerTest):
         ram = 64000
 
         quotas = self.client.show_quota_set(self.tenant_id)['quota_set']
-        self.assertGreater(quotas['cores'], cores)
-        self.assertGreater(quotas['instances'], instances)
-        self.assertGreater(quotas['ram'], ram)
+        self.assertGreater(quotas['instances'], instances,
+                           "the number of instances isn't sufficient")
+        self.assertGreater(quotas['cores'], cores,
+                           "the number of CPUs isn't sufficient")
+        self.assertGreater(quotas['ram'], ram,
+                           "the number of RAM isn't sufficient")

@@ -29,18 +29,18 @@ CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
-class BasicOperationsImagesTest(base.BaseServerTest):
+class ImagesTest(base.BasePCFTest):
     """Here we test the basic operations of images."""
 
     @classmethod
     def setup_credentials(cls):
         """Setup credentials."""
-        super(BasicOperationsImagesTest, cls).setup_credentials()
+        super(ImagesTest, cls).setup_credentials()
 
     @classmethod
     def resource_setup(cls):
         """Setup resources."""
-        super(BasicOperationsImagesTest, cls).resource_setup()
+        super(ImagesTest, cls).resource_setup()
         cls.build_interval = CONF.compute.build_interval
         cls.build_timeout = CONF.compute.build_timeout
         cls.created_images = []
@@ -48,20 +48,13 @@ class BasicOperationsImagesTest(base.BaseServerTest):
     @classmethod
     def setup_clients(cls):
         """Setup clients."""
-        super(BasicOperationsImagesTest, cls).setup_clients()
+        super(ImagesTest, cls).setup_clients()
         cls.glance_client = cls.os.image_client_v2
 
     @classmethod
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_images()
-
-    def _get_output(self):
-        output = self.servers_client.get_console_output(
-            self.server_id, length=10)['output']
-        self.assertTrue(output, "Console output was empty.")
-        lines = len(output.split('\n'))
-        self.assertEqual(lines, 10)
 
     def wait_for(self, condition):
         """Repeatedly calls condition() until a timeout."""
@@ -151,4 +144,4 @@ class BasicOperationsImagesTest(base.BaseServerTest):
         self.server_id = server.get('id')
 
         # wait for console log
-        self.wait_for(self._get_output)
+        self.wait_for(self._log_console_output)
