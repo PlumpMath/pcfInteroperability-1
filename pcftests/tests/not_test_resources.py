@@ -56,7 +56,7 @@ class ResourcesTest(base.BasePCFTest):
     @classmethod
     def create_flavor(cls, **kwargs):
         """Wrapper that returns a test image."""
-        flavor_name = data_utils.rand_name('flavor')
+        flavor_name = data_utils.rand_name('TestResources-flavor')
         flavor_id = data_utils.rand_int_id(start=1000)
 
         if 'name' in kwargs:
@@ -96,7 +96,7 @@ class ResourcesTest(base.BasePCFTest):
                     'Exception raised deleting flavor %s' % flavor_id)
 
     def create_test_server(self, vms, ram, vcpus, disk):
-        flavor_name = data_utils.rand_name('flavor')
+        flavor_name = data_utils.rand_name(self.__class__.__name__)
         # Create a flavor without extra specs
         flavor_id = self.create_flavor(
             name=flavor_name,
@@ -104,14 +104,17 @@ class ResourcesTest(base.BasePCFTest):
             vcpus=vcpus,
             disk=disk)
         made_vms = 0
-        for i in range(vms):
-            server_name = data_utils.rand_name('server')
-            self.create_server(
-                name=server_name,
-                image_id=CONF.compute.image_ref,
-                flavor=flavor_id,
-                wait_until='ACTIVE')
-            made_vms += 1
+        try:
+            for i in range(vms):
+                server_name = data_utils.rand_name(self.__class__.__name__)
+                self.create_server(
+                    name=server_name,
+                    image_id=CONF.compute.image_ref,
+                    flavor=flavor_id,
+                    wait_until='ACTIVE')
+                made_vms += 1
+        except:
+            print('TEST ' + made_vms.to_s)
         self.assertEqual(vms, made_vms,
                          message='Only %s servers was created' % made_vms)
 

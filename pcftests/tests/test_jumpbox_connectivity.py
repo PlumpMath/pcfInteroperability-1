@@ -100,11 +100,11 @@ class JumpboxIpsTest(base.BasePCFTest):
         if (not CONF.pcf.jumpbox_server or
                 not CONF.pcf.jumpbox_private_key_path or
                 not CONF.pcf.jumpbox_ssh_user):
-            self.skipTest("Impossible to connect to jumpbox. Jumpbox IP is not provided.")
+            self.skipTest("Impossible to connect to jumpbox. "
+                          "Jumpbox IP isn't provided.")
 
         server = CONF.pcf.jumpbox_server
         private_key = (open(CONF.pcf.jumpbox_private_key_path)).read()
-
         self._ssh_to_server(server, private_key)
 
         keystone_url = CONF.identity.uri
@@ -130,7 +130,8 @@ class JumpboxIpsTest(base.BasePCFTest):
         if (not CONF.pcf.jumpbox_server or
                 not CONF.pcf.jumpbox_private_key_path or
                 not CONF.pcf.jumpbox_ssh_user):
-            self.skipTest("Impossible to connect to jumpbox. Jumpbox IP is not provided.")
+            self.skipTest("Impossible to connect to jumpbox. "
+                          "Jumpbox IP isn't provided.")
 
         server = CONF.pcf.jumpbox_server
         private_key = (open(CONF.pcf.jumpbox_private_key_path)).read()

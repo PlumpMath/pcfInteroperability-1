@@ -52,7 +52,9 @@ class VmsIpsTest(base.BasePCFTest):
         cls.networks_client = cls.os.networks_client
         cls.subnets_client = cls.os.subnets_client
         cls.keypairs_client = cls.os.keypairs_client
-        cls.floating_ips_client = cls.manager.floating_ips_client
+        cls.floating_ips_client = cls.os.floating_ips_client
+        cls.security_groups_client = cls.os.security_groups_client
+        cls.security_group_rules_client = cls.os.security_group_rules_client
 
     @classmethod
     def setup_credentials(cls):
@@ -191,7 +193,8 @@ class VmsIpsTest(base.BasePCFTest):
         :param tenant_id: secgroup will be created in this tenant
         :returns: DeletableSecurityGroup -- containing the secgroup created
         """
-        client = self.network_client
+        if client is None:
+            client = self.security_groups_client
         if not tenant_id:
             tenant_id = client.tenant_id
         sg_name = data_utils.rand_name(namestart)
@@ -293,18 +296,22 @@ class VmsIpsTest(base.BasePCFTest):
 
         return rules
 
-    def create_security_group(self, client=None, tenant_id=None,
-                              namestart='secgroup'):
-        if client is None:
-            client = self.network_client
+    def create_security_group(self, security_group_rules_client=None,
+                               tenant_id=None,
+                               namestart='secgroup',
+                               security_groups_client=None):
+        if security_group_rules_client is None:
+            security_group_rules_client = self.security_group_rules_client
+        if security_groups_client is None:
+            security_groups_client = self.security_groups_client
         if tenant_id is None:
-            tenant_id = client.tenant_id
+            tenant_id = security_groups_client.tenant_id
         secgroup = self.create_empty_security_group(namestart=namestart,
-                                                    client=client,
+                                                    client=security_groups_client,
                                                     tenant_id=tenant_id)
 
         # Add rules to the security group
-        self._create_loginable_secgroup_rule(client=client,
+        self._create_loginable_secgroup_rule(client=security_group_rules_client,
                                              secgroup=secgroup)
         return secgroup
 

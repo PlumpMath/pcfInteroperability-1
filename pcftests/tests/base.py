@@ -46,7 +46,6 @@ class BasePCFTest(tempest.test.BaseTestCase):
     def setUp(self):
         super(BasePCFTest, self).setUp()
         self.keypairs = {}
-        self.servers = []
         self.cleanup_waits = []
         self.addCleanup(self._wait_for_cleanups)
 
@@ -66,7 +65,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
     @classmethod
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
-#        cls.clear_servers()
+        cls.clear_servers()
 
     def delete_wrapper(self, delete_thing, *args, **kwargs):
         """Ignores NotFound exceptions for delete operations.
@@ -163,7 +162,6 @@ class BasePCFTest(tempest.test.BaseTestCase):
 
     @classmethod
     def clear_servers(cls):
-        """Clear servers at the end of tests."""
         LOG.debug('Clearing servers: %s', ','.join(
             server['id'] for server in cls.servers))
         for server in cls.servers:
@@ -172,11 +170,9 @@ class BasePCFTest(tempest.test.BaseTestCase):
             except lib_exc.NotFound:
                 # Something else already cleaned up the server, nothing to be
                 # worried about
-                print('Server %s not found' % server['id'])
                 pass
             except Exception:
                 LOG.exception('Deleting server %s failed' % server['id'])
-                print('Deleting server %s failed' % server['id'])
 
         for server in cls.servers:
             try:
@@ -185,8 +181,6 @@ class BasePCFTest(tempest.test.BaseTestCase):
             except Exception:
                 LOG.exception('Waiting for deletion of server %s failed'
                               % server['id'])
-                print('Waiting for deletion of server %s failed'
-                      % server['id'])
 
     def _create_loginable_secgroup_rule(self, secgroup_id=None):
         """Create loginable security group rule
