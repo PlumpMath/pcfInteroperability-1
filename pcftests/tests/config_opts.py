@@ -20,12 +20,12 @@ pcf_group = cfg.OptGroup(name='pcf',
                          title='PCF options')
 PCFGroup = [
     cfg.StrOpt('jumpbox_server',
-               default="127.0.0.1",
+               default=None,
                help="IP address of jumpbox"),
     cfg.StrOpt('jumpbox_private_key_path',
-               default="/home/tikitavi/.ssh/tikitavi",
+               default=None,
                help="Private key path"),
     cfg.StrOpt('jumpbox_ssh_user',
-               default="tikitavi",
+               default=None,
                help="SSH user to jumpbox"),
 ]
