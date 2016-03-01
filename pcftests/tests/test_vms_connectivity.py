@@ -547,7 +547,9 @@ class VmsIpsTest(base.BasePCFTest):
                                    should_connect=True):
         ip_address = floating_ip.floating_ip_address
         private_key = self._get_server_key(self.floating_ip_tuple.server)
-        ssh_source = self._ssh_to_server(ip_address, private_key)
+        print(private_key)
+        ssh_source = self.get_remote_client(
+            ip_address, private_key=private_key)
 
         for remote_ip in address_list:
             if should_connect:
@@ -567,12 +569,6 @@ class VmsIpsTest(base.BasePCFTest):
 
     def _get_server_key(self, server):
         return self.keypairs[server['key_name']]['private_key']
-
-    def _ssh_to_server(self, server, private_key):
-        ssh_login = CONF.compute.image_ssh_user
-        return self.get_remote_client(server,
-                                      username=ssh_login,
-                                      private_key=private_key)
 
     def _check_remote_connectivity(self, source, dest, should_succeed=True,
                                    nic=None):
@@ -598,32 +594,18 @@ class VmsIpsTest(base.BasePCFTest):
                                             CONF.validation.ping_timeout,
                                             1)
 
-    def get_remote_client(self, server_or_ip, username=None, private_key=None,
-                          log_console_of_servers=None):
+    def get_remote_client(self, ip_address, username=None, private_key=None):
         """Get a SSH client to a remote server
 
-        @param server_or_ip a server object as returned by Tempest compute
-            client or an IP address to connect to
+        @param ip_address the server floating or fixed IP address to use
+                          for ssh validation
         @param username name of the Linux account on the remote server
         @param private_key the SSH private key to use
-        @param log_console_of_servers a list of server objects. Each server
-            in the list will have its console printed in the logs in case the
-            SSH connection failed to be established
         @return a RemoteClient object
         """
-        if isinstance(server_or_ip, six.string_types):
-            ip = server_or_ip
-        else:
-            addrs = server_or_ip['addresses'][CONF.compute.network_for_ssh]
-            try:
-                ip = (addr['addr'] for addr in addrs if
-                      netaddr.valid_ipv4(addr['addr'])).next()
-            except StopIteration:
-                raise lib_exc.NotFound("No IPv4 addresses to use for SSH to "
-                                       "remote server.")
 
         if username is None:
-            username = CONF.scenario.ssh_user
+            username = CONF.validation.image_ssh_user
         # Set this with 'keypair' or others to log in with keypair or
         # username/password.
         if CONF.validation.auth_method == 'keypair':
@@ -631,24 +613,22 @@ class VmsIpsTest(base.BasePCFTest):
             if private_key is None:
                 private_key = self.keypair['private_key']
         else:
-            password = CONF.compute.image_ssh_password
+            password = CONF.validation.image_ssh_password
             private_key = None
-        linux_client = remote_client.RemoteClient(ip, username,
+        linux_client = remote_client.RemoteClient(ip_address, username,
                                                   pkey=private_key,
                                                   password=password)
         try:
             linux_client.validate_authentication()
         except Exception as e:
             message = ('Initializing SSH connection to %(ip)s failed. '
-                       'Error: %(error)s' % {'ip': ip, 'error': e})
+                       'Error: %(error)s' % {'ip': ip_address,
+                                             'error': e})
             caller = misc_utils.find_test_caller()
             if caller:
                 message = '(%s) %s' % (caller, message)
             LOG.exception(message)
-            # If we don't explicitly set for which servers we want to
-            # log the console output then all the servers will be logged.
-            # See the definition of _log_console_output()
-            self._log_console_output(log_console_of_servers)
+            self._log_console_output()
             raise
 
         return linux_client
@@ -659,7 +639,6 @@ class VmsIpsTest(base.BasePCFTest):
         """
         self.security_group = (
             self.create_security_group(tenant_id=self.tenant_id))
-
         self.network, self.subnet, self.router = self.create_networks()
 
         name = data_utils.rand_name('server')
