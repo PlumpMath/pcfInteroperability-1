@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# import urllib2
+import urllib2
 import time
 
 from oslo_log import log as logging
@@ -105,9 +105,9 @@ class ImagesTest(base.BasePCFTest):
 
         Ability to upload custom images to Glance.
         """
-        # image_link =
-        #   'http://download.cirros-cloud.net/0.3.1/cirros-0.3.1-x86_64-disk.img'
-        image_link = '/opt/stack/tempest/cirros-0.3.1-x86_64-disk.img'
+        image_link = ('http://download.cirros-cloud.net/'
+                      '0.3.1/cirros-0.3.1-x86_64-disk.img')
+        # image_link = '/opt/stack/tempest/cirros-0.3.1-x86_64-disk.img'
 
         image_name = data_utils.rand_name('image')
         body = self.create_image(name=image_name,
@@ -117,8 +117,8 @@ class ImagesTest(base.BasePCFTest):
         self.assertIn('id', body)
         image_id = body.get('id')
 
-        # response = urllib2.urlopen(image_link, timeout=30)
-        response = open(image_link)
+        response = urllib2.urlopen(image_link, timeout=30)
+        #response = open(image_link)
         file_content = response.read()
         image_file = moves.cStringIO(file_content)
         self.glance_client.store_image_file(image_id, image_file)
