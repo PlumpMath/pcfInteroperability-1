@@ -97,6 +97,11 @@ class JumpboxIpsTest(base.BasePCFTest):
 
     def test_connectivity_to_endpoints(self):
 
+        if (not CONF.pcf.jumpbox_server or
+                not CONF.pcf.jumpbox_private_key_path or
+                not CONF.pcf.jumpbox_ssh_user):
+            self.skipTest("Impossible to connect to jumpbox. Jumpbox IP is not provided.")
+
         server = CONF.pcf.jumpbox_server
         private_key = (open(CONF.pcf.jumpbox_private_key_path)).read()
 
@@ -121,6 +126,11 @@ class JumpboxIpsTest(base.BasePCFTest):
             raise exceptions.TimeoutException(msg)
 
     def test_connectivity_to_internet(self):
+
+        if (not CONF.pcf.jumpbox_server or
+                not CONF.pcf.jumpbox_private_key_path or
+                not CONF.pcf.jumpbox_ssh_user):
+            self.skipTest("Impossible to connect to jumpbox. Jumpbox IP is not provided.")
 
         server = CONF.pcf.jumpbox_server
         private_key = (open(CONF.pcf.jumpbox_private_key_path)).read()
