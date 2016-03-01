@@ -26,7 +26,7 @@ class SecurityGroupsTest(base.BasePCFTest):
         """Setup clients."""
         super(SecurityGroupsTest, cls).setup_clients()
         cls.client = cls.os.compute_security_groups_client
-        cls.rules_client = cls.os.security_group_rules_client
+        cls.rules_client = cls.os.compute_security_group_rules_client
 
     @classmethod
     def resource_setup(cls):
