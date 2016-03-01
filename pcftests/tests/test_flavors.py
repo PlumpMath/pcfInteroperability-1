@@ -40,7 +40,6 @@ class FlavorTest(base.BasePCFTest):
         """Setup resources."""
         super(FlavorTest, cls).resource_setup()
         cls.created_flavors = []
-        cls.created_servers = []
 
     @classmethod
     def setup_clients(cls):
@@ -52,7 +51,7 @@ class FlavorTest(base.BasePCFTest):
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_flavors()
-        cls.clear_servers()
+        super(FlavorTest, cls).resource_cleanup()
 
     @classmethod
     def create_flavor(cls, **kwargs):

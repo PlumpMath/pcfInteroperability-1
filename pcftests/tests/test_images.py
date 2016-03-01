@@ -55,6 +55,7 @@ class ImagesTest(base.BasePCFTest):
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_images()
+        super(ImagesTest, cls).resource_cleanup()
 
     def wait_for(self, condition):
         """Repeatedly calls condition() until a timeout."""
