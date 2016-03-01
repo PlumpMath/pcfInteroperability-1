@@ -52,6 +52,7 @@ class ResourcesTest(base.BasePCFTest):
     def resource_cleanup(cls):
         """Cleanup at the end of the tests."""
         cls.clear_flavors()
+        super(ResourcesTest, cls).resource_cleanup()
 
     @classmethod
     def create_flavor(cls, **kwargs):
@@ -107,14 +108,14 @@ class ResourcesTest(base.BasePCFTest):
         try:
             for i in range(vms):
                 server_name = data_utils.rand_name(self.__class__.__name__)
-                self.create_server(
+                server = self.create_server(
                     name=server_name,
                     image_id=CONF.compute.image_ref,
                     flavor=flavor_id,
                     wait_until='ACTIVE')
                 made_vms += 1
         except:
-            print('TEST ' + made_vms.to_s)
+            print('Only %s servers was created' % made_vms)
         self.assertEqual(vms, made_vms,
                          message='Only %s servers was created' % made_vms)
 
@@ -148,4 +149,5 @@ class ResourcesTest(base.BasePCFTest):
         flavor = self.flavor_client.show_flavor(flavor_ref)['flavor']
         disk = flavor['disk']
         ephemeral = flavor['OS-FLV-EXT-DATA:ephemeral']
-        self.assertTrue(disk > 0 or ephemeral > 0)
+        msg = 'No root or ephemeral disk sizes'
+        self.assertTrue(disk > 0 or ephemeral > 0, msg)
