@@ -19,6 +19,18 @@ from oslo_config import cfg
 pcf_group = cfg.OptGroup(name='pcf',
                          title='PCF options')
 PCFGroup = [
+    cfg.BoolOpt('centos_stemcells_required',
+                default=False,
+                help="if CentOS stemcells are required"),
+    cfg.IntOpt('vms_volumes_number',
+               default=6,
+               help="Number of VMs and volumes for testing deploing and "
+                    "deleting up a consistent number "
+                    "of VMs and volumes at once"),
+    cfg.IntOpt('volumes_number',
+               default=6,
+               help="Number of VMs and volumes for testing 	capability of "
+                    "deleting multiple 20GB volumes within 300 seconds"),
     cfg.StrOpt('jumpbox_server',
                default=None,
                help="IP address of jumpbox"),
@@ -28,4 +40,7 @@ PCFGroup = [
     cfg.StrOpt('jumpbox_ssh_user',
                default=None,
                help="SSH user to jumpbox"),
+    cfg.StrOpt('jumpbox_ssh_password',
+               default=None,
+               help="SSH password to jumpbox")
 ]

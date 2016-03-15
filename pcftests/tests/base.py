@@ -14,16 +14,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.from oslo_log import log as logging
 
+
+import collections
+import netaddr
+import six
+import time
+
 from oslo_log import log as logging
 from tempest.common import compute
+from tempest.common.utils import data_utils
+from tempest.common.utils.linux import remote_client
 from tempest.common import waiters
 from tempest import config
+from tempest.services.network import resources as net_resources
 import tempest.test
+from tempest_lib.common.utils import misc as misc_utils
 from tempest_lib import exceptions as lib_exc
 
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
+
+Floating_IP_tuple = collections.namedtuple('Floating_IP_tuple',
+                                           ['floating_ip', 'server'])
 
 
 class BasePCFTest(tempest.test.BaseTestCase):
@@ -41,6 +54,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
     def resource_setup(cls):
         """Setup resources."""
         super(BasePCFTest, cls).resource_setup()
+        cls.tenant_id = cls.os.network_client.tenant_id
         cls.servers = []
 
     def setUp(self):
@@ -53,14 +67,20 @@ class BasePCFTest(tempest.test.BaseTestCase):
     def setup_clients(cls):
         """Setup clients."""
         super(BasePCFTest, cls).setup_clients()
-        cls.servers_client = cls.manager.servers_client
-        cls.keypairs_client = cls.os.keypairs_client
-        cls.compute_security_groups_client = (
-            cls.os.compute_security_groups_client)
-        cls.security_group_rules_client = (
-            cls.os.security_group_rules_client)
-        cls.compute_floating_ips_client = (
+        cls.floatingip_client = (
             cls.os.compute_floating_ips_client)
+        cls.glance_client = cls.os.image_client_v2
+        cls.keypairs_client = cls.os.keypairs_client
+        cls.network_client = cls.os.network_client
+        cls.networks_client = cls.os.networks_client
+        cls.servers_client = cls.os.servers_client
+        cls.sg_client = cls.os.compute_security_groups_client
+        cls.sg_rules_client = cls.os.security_group_rules_client
+        cls.subnets_client = cls.os.subnets_client
+        cls.volumes_ext_client = cls.os.volumes_extensions_client
+        cls.volume_client = cls.os.volumes_v2_client
+        if CONF.volume_feature_enabled.api_v1:
+            cls.volume_client = cls.os.volumes_client
 
     @classmethod
     def resource_cleanup(cls):
@@ -120,6 +140,21 @@ class BasePCFTest(tempest.test.BaseTestCase):
             waiter_callable = wait.pop('waiter_callable')
             waiter_callable(**wait)
 
+    def wait_for(self, condition):
+        """Repeatedly calls condition() until a timeout."""
+        start_time = int(time.time())
+        while True:
+            try:
+                condition()
+            except Exception:
+                pass
+            else:
+                return
+            if int(time.time()) - start_time >= self.build_timeout:
+                condition()
+                return
+            time.sleep(self.build_interval)
+
     def _log_console_output(self, servers=None):
         if not CONF.compute_feature_enabled.console_output:
             LOG.debug('Console output not supported, cannot log')
@@ -160,6 +195,239 @@ class BasePCFTest(tempest.test.BaseTestCase):
 
         return body
 
+    def create_keypair(self):
+
+        name = data_utils.rand_name(self.__class__.__name__)
+        # We don't need to create a keypair by pubkey in scenario
+        body = self.keypairs_client.create_keypair(name=name)
+        self.addCleanup(self.keypairs_client.delete_keypair, name)
+        return body['keypair']
+
+    def create_security_group(self):
+        """Create a security group without rules."""
+        sg_name = data_utils.rand_name('secgroup')
+        sg_desc = sg_name + " description"
+        sg_dict = dict(name=sg_name,
+                       description=sg_desc,
+                       tenant_id=self.tenant_id)
+        result = self.sg_client.create_security_group(**sg_dict)
+        secgroup = net_resources.DeletableSecurityGroup(
+            client=self.sg_client,
+            **result['security_group']
+        )
+        self.addCleanup(self.delete_wrapper, secgroup.delete)
+        return secgroup
+
+    def create_secgroup_rule(self, secgroup_id, rulesets):
+        """Create security group rule"""
+
+        client = self.sg_rules_client
+        rules = []
+        for ruleset in rulesets:
+            ruleset['tenant_id'] = self.tenant_id
+            ruleset['security_group_id'] = secgroup_id
+            for r_direction in ['ingress', 'egress']:
+                ruleset['direction'] = r_direction
+                try:
+                    sg_rule = client.create_security_group_rule(**ruleset)
+                    sg_rule = net_resources.DeletableSecurityGroupRule(
+                        client=client,
+                        **sg_rule['security_group_rule'])
+                    self.addCleanup(self.delete_wrapper, sg_rule.delete)
+                except lib_exc.Conflict as ex:
+                    # if rule already exist - skip rule and continue
+                    msg = 'Security group rule already exists'
+                    if msg not in ex._error_string:
+                        raise ex
+                else:
+                    self.assertEqual(r_direction, sg_rule.direction)
+                    rules.append(sg_rule)
+        return rules
+
+    def create_networks(self):
+        """Create a network with a subnet connected to a router."""
+
+        # Create network
+        name = data_utils.rand_name('network')
+        result = self.networks_client.create_network(name=name,
+                                                     tenant_id=self.tenant_id)
+        network = net_resources.DeletableNetwork(
+            networks_client=self.networks_client, **result['network'])
+        self.addCleanup(self.delete_wrapper, network.delete)
+
+        # Get or create router
+        router_id = CONF.network.public_router_id
+        network_id = CONF.network.public_network_id
+        if router_id:
+            result = self.network_client.show_router(router_id)
+            router = net_resources.AttributeDict(**result['router'])
+        elif network_id:
+            name = data_utils.rand_name('router')
+            result = self.network_client.create_router(
+                name=name,
+                admin_state_up=True,
+                tenant_id=self.tenant_id)
+            router = net_resources.DeletableRouter(client=self.network_client,
+                                                   **result['router'])
+            self.addCleanup(self.delete_wrapper, router.delete)
+            router.set_gateway(network_id)
+        else:
+            raise Exception("Neither of 'public_router_id' or "
+                            "'public_network_id' has been defined.")
+
+        # Create subnet
+        def cidr_in_use(cidr, tenant_id):
+            """Check cidr existence
+            :returns: True if subnet with cidr already exist in tenant
+                  False else
+            """
+            subnets_list = self.os_adm.subnets_client.list_subnets(
+                tenant_id=tenant_id, cidr=cidr)
+            return len(subnets_list['subnets']) != 0
+
+        tenant_cidr = netaddr.IPNetwork(CONF.network.tenant_network_cidr)
+        num_bits = CONF.network.tenant_network_mask_bits
+
+        result = None
+        # Repeatedly attempt subnet creation with sequential cidr
+        # blocks until an unallocated block is found.
+        for subnet_cidr in tenant_cidr.subnet(num_bits):
+            str_cidr = str(subnet_cidr)
+            if cidr_in_use(str_cidr, tenant_id=network.tenant_id):
+                continue
+            subnet = dict(
+                name=data_utils.rand_name('subnet'),
+                network_id=network.id,
+                tenant_id=network.tenant_id,
+                cidr=str_cidr,
+                ip_version=4
+            )
+            try:
+                result = self.subnets_client.create_subnet(**subnet)
+                break
+            except lib_exc.Conflict as e:
+                is_overlapping_cidr = 'overlaps with another subnet' in str(e)
+                if not is_overlapping_cidr:
+                    raise
+        self.assertIsNotNone(result, 'Unable to allocate tenant network')
+        subnet = net_resources.DeletableSubnet(
+            network_client=self.network_client,
+            subnets_client=self.subnets_client,
+            **result['subnet'])
+        self.addCleanup(self.delete_wrapper, subnet.delete)
+
+        # Add subnet to router
+        subnet.add_to_router(router.id)
+
+        return network, subnet, router
+
+    def get_remote_client(self, server_ip, private_key, password,
+                          ssh_login=None,
+                          log_console_of_servers=None):
+        # Get a SSH client to a remote server
+        if ssh_login is None:
+            ssh_login = CONF.validation.image_ssh_user
+        if isinstance(server_ip, six.string_types):
+            ip = server_ip
+        else:
+            addrs = server_ip['addresses'][CONF.compute.network_for_ssh]
+            try:
+                ip = (addr['addr'] for addr in addrs if
+                      netaddr.valid_ipv4(addr['addr'])).next()
+            except StopIteration:
+                raise lib_exc.NotFound("No IPv4 addresses to use for SSH to "
+                                       "remote server.")
+
+        linux_client = remote_client.RemoteClient(ip, ssh_login,
+                                                  pkey=private_key,
+                                                  password=password)
+        try:
+            linux_client.validate_authentication()
+        except Exception as e:
+            message = ('Initializing SSH connection to %(ip)s failed. '
+                       'Error: %(error)s' % {'ip': ip, 'error': e})
+            caller = misc_utils.find_test_caller()
+            if caller:
+                message = '(%s) %s' % (caller, message)
+            LOG.exception(message)
+            # If we don't explicitly set for which servers we want to
+            # log the console output then all the servers will be logged.
+            # See the definition of _log_console_output()
+            self._log_console_output(log_console_of_servers)
+            raise
+
+        return linux_client
+
+    def check_remote_connectivity(self, source, dest):
+        """check ping server via source ssh connection
+
+        :param source: RemoteClient: an ssh connection from which to ping
+        :param dest: and IP to ping against
+        :param should_succeed: boolean should ping succeed or not
+        :param nic: specific network interface to ping from
+        :returns: boolean -- should_succeed == ping
+        :returns: ping is false if ping failed
+        """
+        should_succeed = True
+
+        def ping_remote():
+            try:
+                source.ping_host(dest, nic=None)
+            except lib_exc.SSHExecCommandFailed:
+                LOG.warning('Failed to ping IP: %s via a ssh connection '
+                            'from: %s.' % (dest, source.ssh_client.host))
+                return not should_succeed
+            return should_succeed
+
+        return tempest.test.call_until_true(ping_remote,
+                                            CONF.validation.ping_timeout, 1)
+
+    def start_creation(self, rulesets, name=None):
+
+        self.keypair = self.create_keypair()
+        self.secgroup = self.create_security_group()
+        self.create_secgroup_rule(self.secgroup['id'], rulesets)
+        self.network, self.subnet, self.router = self.create_networks()
+
+        if name is None:
+            name = data_utils.rand_name('server')
+        network = {'uuid': self.network.id}
+        security_groups = [{'name': self.secgroup['name']}]
+        self.md = {'meta1': 'data1', 'meta2': 'data2', 'metaN': 'dataN'}
+        server = self.create_server(name=name,
+                                    networks=[network],
+                                    security_groups=security_groups,
+                                    key_name=self.keypair['name'],
+                                    metadata=self.md,
+                                    wait_until='ACTIVE')
+        self.addCleanup(waiters.wait_for_server_termination,
+                        self.servers_client,
+                        server['id'])
+
+        self.addCleanup_with_wait(
+            waiter_callable=waiters.wait_for_server_termination,
+            thing_id=server['id'], thing_id_param='server_id',
+            cleanup_callable=self.delete_wrapper,
+            cleanup_args=[self.servers_client.delete_server, server['id']],
+            waiter_client=self.servers_client)
+
+        server_id = server['id']
+
+        # Floating IP creation
+        floating = self.floatingip_client.create_floating_ip()['floating_ip']
+        floating_ip_id = floating['id']
+        self.addCleanup(self.floatingip_client.delete_floating_ip,
+                        floating_ip_id)
+        floating_ip = floating['ip']
+        self.floating_ip_tuple = Floating_IP_tuple(
+            floating_ip, server)
+        # Association of floating IP to fixed IP address
+        self.floatingip_client.associate_floating_ip_to_server(
+            floating_ip,
+            server_id)
+
+        return server, floating
+
     @classmethod
     def clear_servers(cls):
         LOG.debug('Clearing servers: %s', ','.join(
@@ -181,50 +449,3 @@ class BasePCFTest(tempest.test.BaseTestCase):
             except Exception:
                 LOG.exception('Waiting for deletion of server %s failed'
                               % server['id'])
-
-    def _create_loginable_secgroup_rule(self, secgroup_id=None):
-        """Create loginable security group rule
-
-        These rules are intended to permit inbound ssh and icmp
-        traffic from all sources, so no group_id is provided.
-        Setting a group_id would only permit traffic from ports
-        belonging to the same security group.
-        """
-
-        client = self.compute_security_groups_client
-        client_rules = self.security_group_rules_client
-        if secgroup_id is None:
-            sgs = client.list_security_groups()['security_groups']
-            for sg in sgs:
-                if sg['name'] == 'default':
-                    secgroup_id = sg['id']
-
-        # These rules are intended to permit inbound ssh and icmp
-        # traffic from all sources, so no group_id is provided.
-        # Setting a group_id would only permit traffic from ports
-        # belonging to the same security group.
-        rulesets = [
-            {
-                # ssh
-                'ip_protocol': 'tcp',
-                'from_port': 22,
-                'to_port': 22,
-                'cidr': '0.0.0.0/0',
-            },
-            {
-                # ping
-                'ip_protocol': 'icmp',
-                'from_port': -1,
-                'to_port': -1,
-                'cidr': '0.0.0.0/0',
-            }
-        ]
-        rules = list()
-        for ruleset in rulesets:
-            sg_rule = client_rules.create_security_group_rule(
-                parent_group_id=secgroup_id, **ruleset)['security_group_rule']
-            self.addCleanup(self.delete_wrapper,
-                            client_rules.delete_security_group_rule,
-                            sg_rule['id'])
-            rules.append(sg_rule)
-        return rules

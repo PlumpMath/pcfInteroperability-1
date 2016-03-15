@@ -46,6 +46,7 @@ class ResourcesTest(base.BasePCFTest):
         """Setup clients."""
         super(ResourcesTest, cls).setup_clients()
         cls.flavor_client = cls.os_adm.flavors_client
+        cls.hypervisor_client = cls.os_adm.hypervisor_client
         cls.quotas_client = cls.os_adm.volume_quotas_v2_client
 
     @classmethod
@@ -104,20 +105,21 @@ class ResourcesTest(base.BasePCFTest):
             ram=ram,
             vcpus=vcpus,
             disk=disk)
-        made_vms = 0
+        vms_created = 0
         try:
             for i in range(vms):
                 server_name = data_utils.rand_name(self.__class__.__name__)
-                server = self.create_server(
+                self.create_server(
                     name=server_name,
                     image_id=CONF.compute.image_ref,
                     flavor=flavor_id,
                     wait_until='ACTIVE')
-                made_vms += 1
-        except:
-            print('Only %s servers was created' % made_vms)
-        self.assertEqual(vms, made_vms,
-                         message='Only %s servers was created' % made_vms)
+                vms_created += 1
+        except Exception:
+            pass
+        self.clear_servers()
+        self.assertEqual(vms, vms_created,
+                         message='Only %s servers was created' % vms_created)
 
     def test_resources_small_vms(self):
 
@@ -138,10 +140,14 @@ class ResourcesTest(base.BasePCFTest):
         self.create_test_server(vms, ram, vcpus, disk)
 
     def test_volume_resources(self):
+
         gig = 300
 
-        quotas = self.quotas_client.show_quota_set(self.tenant_id)['quota_set']
-        self.assertGreater(quotas['gigabytes'], gig)
+        hypers = self.hypervisor_client.list_hypervisors()['hypervisors']
+        free_disk = (self.hypervisor_client.show_hypervisor
+                     (hypers[0]['id'])['hypervisor']['free_disk_gb'])
+        msg = "Insufficient available block storage"
+        self.assertGreaterEqual(free_disk, gig, msg)
 
     def test_ephemeral_or_root_disk(self):
 

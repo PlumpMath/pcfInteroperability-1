@@ -54,35 +54,6 @@ class FlavorTest(base.BasePCFTest):
         super(FlavorTest, cls).resource_cleanup()
 
     @classmethod
-    def create_flavor(cls, **kwargs):
-        """Wrapper that returns a test image."""
-        flavor_name = data_utils.rand_name('FlavorTest')
-
-        flavor_id = data_utils.rand_int_id(start=1000)
-
-        if 'name' in kwargs:
-            flavor_name = kwargs.pop('name')
-
-        ram = kwargs.pop('ram')
-        vcpus = kwargs.pop('vcpus')
-        disk = kwargs.pop('disk')
-
-        flavor = (cls.flavor_client.create_flavor
-                  (name=flavor_name,
-                   ram=ram,
-                   vcpus=vcpus,
-                   disk=disk,
-                   id=flavor_id))['flavor']
-
-        # Image objects returned by the v1 client have the image
-        # data inside a dict that is keyed against 'image'.
-        if 'flavor' in flavor:
-            flavor = flavor['flavor']
-        cls.created_flavors.append(flavor['id'])
-
-        return flavor['id']
-
-    @classmethod
     def clear_flavors(cls):
         """Clear flavors at the end of tests."""
         LOG.debug('Clearing flavors: %s', ','.join(cls.created_flavors))
@@ -102,13 +73,23 @@ class FlavorTest(base.BasePCFTest):
         vcpus = 1
         disk = 0
 
-        # Create a flavor without extra specs
+        # Create a flavor
         flavor_name = data_utils.rand_name(self.__class__.__name__)
-        flavor_id = self.create_flavor(
+        flavor_id = data_utils.rand_int_id(start=1000)
+
+        flavor = self.flavor_client.create_flavor(
             name=flavor_name,
             ram=ram,
             vcpus=vcpus,
-            disk=disk)
+            disk=disk,
+            id=flavor_id)['flavor']
+
+        # Image objects returned by the v1 client have the image
+        # data inside a dict that is keyed against 'image'.
+        if 'flavor' in flavor:
+            flavor = flavor['flavor']
+        flavor_id = flavor['id']
+        self.created_flavors.append(flavor_id)
 
         server_name = data_utils.rand_name(self.__class__.__name__)
         self.create_server(

@@ -22,25 +22,18 @@ class QuotasTest(base.BasePCFTest):
     @classmethod
     def setup_clients(cls):
         """Setup clients."""
-        super(QuotasTest, cls).setup_clients()
         cls.client = cls.os.quotas_client
-
-    @classmethod
-    def resource_setup(cls):
-        """Setup resources"""
-        super(QuotasTest, cls).resource_setup()
-        cls.tenant_id = cls.client.tenant_id
 
     def test_quotas(self):
         """Verify that quotas are available for the user/tenant."""
-        cores = 32
         instances = 22
+        cores = 32
         ram = 64000
 
         quotas = self.client.show_quota_set(self.tenant_id)['quota_set']
-        self.assertGreater(quotas['instances'], instances,
-                           "the number of instances isn't sufficient")
-        self.assertGreater(quotas['cores'], cores,
-                           "the number of CPUs isn't sufficient")
-        self.assertGreater(quotas['ram'], ram,
-                           "the number of RAM isn't sufficient")
+        self.assertGreaterEqual(quotas['instances'], instances,
+                                "Insufficient number of instances in quotas")
+        self.assertGreaterEqual(quotas['cores'], cores,
+                                "Insufficient number of CPUs in quotas")
+        self.assertGreaterEqual(quotas['ram'], ram,
+                                "Insufficient RAM in quotas")
