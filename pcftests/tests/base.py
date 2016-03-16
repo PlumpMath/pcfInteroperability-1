@@ -73,6 +73,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
         cls.keypairs_client = cls.os.keypairs_client
         cls.network_client = cls.os.network_client
         cls.networks_client = cls.os.networks_client
+        cls.routers_client = cls.os.routers_client
         cls.servers_client = cls.os.servers_client
         cls.sg_client = cls.os.compute_security_groups_client
         cls.sg_rules_client = cls.os.security_group_rules_client
@@ -252,23 +253,26 @@ class BasePCFTest(tempest.test.BaseTestCase):
         result = self.networks_client.create_network(name=name,
                                                      tenant_id=self.tenant_id)
         network = net_resources.DeletableNetwork(
-            networks_client=self.networks_client, **result['network'])
+            networks_client=self.networks_client,
+            routers_client=self.routers_client,
+            **result['network'])
         self.addCleanup(self.delete_wrapper, network.delete)
 
         # Get or create router
         router_id = CONF.network.public_router_id
         network_id = CONF.network.public_network_id
         if router_id:
-            result = self.network_client.show_router(router_id)
+            result = self.routers_client.show_router(router_id)
             router = net_resources.AttributeDict(**result['router'])
         elif network_id:
             name = data_utils.rand_name('router')
-            result = self.network_client.create_router(
+            result = self.routers_client.create_router(
                 name=name,
                 admin_state_up=True,
                 tenant_id=self.tenant_id)
-            router = net_resources.DeletableRouter(client=self.network_client,
-                                                   **result['router'])
+            router = net_resources.DeletableRouter(
+                routers_client=self.routers_client,
+                **result['router'])
             self.addCleanup(self.delete_wrapper, router.delete)
             router.set_gateway(network_id)
         else:
@@ -313,6 +317,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
         subnet = net_resources.DeletableSubnet(
             network_client=self.network_client,
             subnets_client=self.subnets_client,
+            routers_client=self.routers_client,
             **result['subnet'])
         self.addCleanup(self.delete_wrapper, subnet.delete)
 
