@@ -68,7 +68,7 @@ class VolumesTest(base.BasePCFTest):
         of deleting multiple 20GB volumes within 300 seconds.
         """
         volume_number = CONF.pcf.volumes_number
-        volume_size = 1
+        volume_size = 20
         volumes = self.created_volumes
 
         for i in range(volume_number):
