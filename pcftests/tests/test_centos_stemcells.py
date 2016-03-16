@@ -35,7 +35,7 @@ class CentosFlavorsTest(base.BasePCFTest):
     def test_flavors_for_centos(self):
 
         if not CONF.pcf.centos_stemcells_required:
-            self.skipTest("CentOS stemcells aren't required")
+            self.skipTest("CentOS stemcells requirment isn't configured.")
 
         centos_flavor = False
         flavors = self.flavor_client.list_flavors()['flavors']
