@@ -26,10 +26,10 @@ from tempest.common.utils import data_utils
 from tempest.common.utils.linux import remote_client
 from tempest.common import waiters
 from tempest import config
+from tempest.lib.common.utils import misc as misc_utils
+from tempest.lib import exceptions as lib_exc
 from tempest.services.network import resources as net_resources
 import tempest.test
-from tempest_lib.common.utils import misc as misc_utils
-from tempest_lib import exceptions as lib_exc
 
 
 CONF = config.CONF

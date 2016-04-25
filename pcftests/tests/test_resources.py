@@ -17,7 +17,7 @@
 from oslo_log import log as logging
 from tempest.common.utils import data_utils
 from tempest import config
-from tempest_lib import exceptions as lib_exc
+from tempest.lib import exceptions as lib_exc
 
 from pcftests.tests import base
 

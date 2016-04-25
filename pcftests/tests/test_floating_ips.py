@@ -19,9 +19,8 @@ import subprocess
 from oslo_log import log as logging
 from tempest.common.utils import data_utils
 from tempest import config
+from tempest.lib.common.utils import misc as misc_utils
 import tempest.test
-from tempest_lib.common.utils import misc as misc_utils
-
 
 from pcftests.tests import base
 
