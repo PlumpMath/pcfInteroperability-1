@@ -16,6 +16,7 @@
 
 from oslo_log import log as logging
 from tempest.common.utils import data_utils
+from tempest.common import waiters
 from tempest import config
 from tempest.lib import exceptions as lib_exc
 
@@ -97,7 +98,8 @@ class ApiRateTest(base.BasePCFTest):
         except Exception:
             pass
         for volume_id in self.created_volumes:
-            self.volume_client.wait_for_volume_status(volume_id, 'available')
+            waiters.wait_for_volume_status(self.volume_client,
+                                           volume_id, 'available')
         self.assertEqual(vms, len(self.created_volumes),
                          message='Only %s volumes was created'
                                  % len(self.created_volumes))

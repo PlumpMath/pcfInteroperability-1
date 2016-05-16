@@ -54,7 +54,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
     def resource_setup(cls):
         """Setup resources."""
         super(BasePCFTest, cls).resource_setup()
-        cls.tenant_id = cls.os.network_client.tenant_id
+        cls.tenant_id = cls.manager.identity_client.tenant_id
         cls.servers = []
 
     def setUp(self):
@@ -71,7 +71,6 @@ class BasePCFTest(tempest.test.BaseTestCase):
             cls.os.compute_floating_ips_client)
         cls.glance_client = cls.os.image_client_v2
         cls.keypairs_client = cls.os.keypairs_client
-        cls.network_client = cls.os.network_client
         cls.networks_client = cls.os.networks_client
         cls.routers_client = cls.os.routers_client
         cls.servers_client = cls.os.servers_client
@@ -289,8 +288,8 @@ class BasePCFTest(tempest.test.BaseTestCase):
                 tenant_id=tenant_id, cidr=cidr)
             return len(subnets_list['subnets']) != 0
 
-        tenant_cidr = netaddr.IPNetwork(CONF.network.tenant_network_cidr)
-        num_bits = CONF.network.tenant_network_mask_bits
+        tenant_cidr = netaddr.IPNetwork(CONF.network.project_network_cidr)
+        num_bits = CONF.network.project_network_mask_bits
 
         result = None
         # Repeatedly attempt subnet creation with sequential cidr
@@ -315,7 +314,6 @@ class BasePCFTest(tempest.test.BaseTestCase):
                     raise
         self.assertIsNotNone(result, 'Unable to allocate tenant network')
         subnet = net_resources.DeletableSubnet(
-            network_client=self.network_client,
             subnets_client=self.subnets_client,
             routers_client=self.routers_client,
             **result['subnet'])

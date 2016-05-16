@@ -20,6 +20,7 @@ import urllib2
 
 from oslo_log import log as logging
 from tempest.common.utils import data_utils
+from tempest.common import waiters
 from tempest import config
 from tempest.lib import exceptions as lib_exc
 
@@ -105,8 +106,9 @@ class ImagesTest(base.BasePCFTest):
         volume = self.volume_client.create_volume(
             display_name=volume_name,
             imageRef=image_id)
-        self.volume_client.wait_for_volume_status(volume['volume']['id'],
-                                                  'available')
+        waiters.wait_for_volume_status(self.volume_client,
+                                       volume['volume']['id'],
+                                       'available')
         bd_map_v2 = [{
             'uuid': volume['volume']['id'],
             'source_type': 'volume',

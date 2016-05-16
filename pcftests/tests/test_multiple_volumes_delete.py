@@ -19,6 +19,7 @@ import time
 
 from oslo_log import log as logging
 from tempest.common.utils import data_utils
+from tempest.common import waiters
 from tempest import config
 from tempest.lib import exceptions as lib_exc
 
@@ -78,8 +79,8 @@ class VolumesTest(base.BasePCFTest):
                 size=volume_size)
             volume_id = volume['volume']['id']
             volumes.append(volume_id)
-            self.volume_client.wait_for_volume_status(volume_id,
-                                                      'available')
+            waiters.wait_for_volume_status(self.volume_client,
+                                           volume_id, 'available')
 
         start_time = time.time()
         for volume_id in volumes:
