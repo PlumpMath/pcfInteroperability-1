@@ -28,7 +28,7 @@ from tempest.common import waiters
 from tempest import config
 from tempest.lib.common.utils import misc as misc_utils
 from tempest.lib import exceptions as lib_exc
-from tempest.services.network import resources as net_resources
+from tempest.scenario import network_resources
 import tempest.test
 
 
@@ -211,7 +211,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
                        description=sg_desc,
                        tenant_id=self.tenant_id)
         result = self.sg_client.create_security_group(**sg_dict)
-        secgroup = net_resources.DeletableSecurityGroup(
+        secgroup = network_resources.DeletableSecurityGroup(
             client=self.sg_client,
             **result['security_group']
         )
@@ -230,7 +230,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
                 ruleset['direction'] = r_direction
                 try:
                     sg_rule = client.create_security_group_rule(**ruleset)
-                    sg_rule = net_resources.DeletableSecurityGroupRule(
+                    sg_rule = network_resources.DeletableSecurityGroupRule(
                         client=client,
                         **sg_rule['security_group_rule'])
                     self.addCleanup(self.delete_wrapper, sg_rule.delete)
@@ -251,7 +251,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
         name = data_utils.rand_name('network')
         result = self.networks_client.create_network(name=name,
                                                      tenant_id=self.tenant_id)
-        network = net_resources.DeletableNetwork(
+        network = network_resources.DeletableNetwork(
             networks_client=self.networks_client,
             routers_client=self.routers_client,
             **result['network'])
@@ -262,14 +262,14 @@ class BasePCFTest(tempest.test.BaseTestCase):
         network_id = CONF.network.public_network_id
         if router_id:
             result = self.routers_client.show_router(router_id)
-            router = net_resources.AttributeDict(**result['router'])
+            router = network_resources.AttributeDict(**result['router'])
         elif network_id:
             name = data_utils.rand_name('router')
             result = self.routers_client.create_router(
                 name=name,
                 admin_state_up=True,
                 tenant_id=self.tenant_id)
-            router = net_resources.DeletableRouter(
+            router = network_resources.DeletableRouter(
                 routers_client=self.routers_client,
                 **result['router'])
             self.addCleanup(self.delete_wrapper, router.delete)
@@ -313,7 +313,7 @@ class BasePCFTest(tempest.test.BaseTestCase):
                 if not is_overlapping_cidr:
                     raise
         self.assertIsNotNone(result, 'Unable to allocate tenant network')
-        subnet = net_resources.DeletableSubnet(
+        subnet = network_resources.DeletableSubnet(
             subnets_client=self.subnets_client,
             routers_client=self.routers_client,
             **result['subnet'])
